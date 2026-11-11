@@ -313,6 +313,14 @@ export class App {
       }),
     );
   }
+  // Commit native filter selections before submitting. This also avoids a select
+  // mutation-observer race when filtering immediately after changing an option.
+  setFilter(target: 'products' | 'history' | 'dashboard', key: string, event: Event) {
+    const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
+    if (target === 'products') this.filterModel.update((m) => ({ ...m, [key]: value }));
+    else if (target === 'history') this.historyModel.update((m) => ({ ...m, [key]: value }));
+    else this.dateModel.update((m) => ({ ...m, [key]: value }));
+  }
   async loadHistory() {
     const q = new URLSearchParams();
     Object.entries(this.historyModel()).forEach(([k, v]) => {

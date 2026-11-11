@@ -64,6 +64,8 @@ La contraseña se solicita de forma oculta dos veces, con mínimo 10 caracteres,
 
 `API_PORT` permite cambiar el puerto del backend. El frontend usa `/api` y un proxy relativo; no hay direcciones personales en el código.
 
+El arranque rechaza puertos ocupados. Para otra instancia usar `API_PORT` distinto y `start.ps1 -FrontendPort 4201`.
+
 Si PowerShell bloquea scripts, no es necesario cambiar políticas permanentemente. Puede ejecutar los comandos manuales siguientes, o solicitar permiso para usar `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start.ps1`, que aplica solo a ese proceso.
 
 ### Alternativa manual de arranque
