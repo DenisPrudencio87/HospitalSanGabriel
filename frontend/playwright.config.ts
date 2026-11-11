@@ -4,7 +4,7 @@ export default defineConfig({
   workers: 1,
   timeout: 60000,
   use: {
-    baseURL: 'http://localhost:4200',
+    baseURL: process.env['E2E_BASE_URL'] || 'http://localhost:4200',
     channel: 'chrome',
     headless: true,
     actionTimeout: 10000,

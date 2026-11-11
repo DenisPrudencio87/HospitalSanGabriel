@@ -147,3 +147,22 @@ def test_setup_rejects_existing_database(database):
     result=subprocess.run([sys.executable,str(manage),'setup'],capture_output=True,text=True)
     assert result.returncode==1 and 'ya existe' in result.stderr
     assert rows('usp_Health')[0]['inconsistencies']==0
+
+
+def test_limited_database_role(database):
+    from pathlib import Path
+    assert database.startswith('HSG_Test_')
+    script=Path(__file__).resolve().parents[2]/'database/06-permissions.sql'
+    with closing(connect()) as c:
+        c.execute(script.read_text(encoding='utf-8'))
+        c.execute('CREATE USER hsg_test_limited WITHOUT LOGIN; ALTER ROLE hsg_app ADD MEMBER hsg_test_limited;')
+        c.execute("EXECUTE AS USER='hsg_test_limited'")
+        try:
+            assert c.execute('EXEC dbo.usp_Product_List').fetchone() is not None
+            import pyodbc
+            with pytest.raises(pyodbc.Error):
+                c.execute('SELECT * FROM dbo.Product')
+            with pytest.raises(pyodbc.Error):
+                c.execute("EXEC dbo.usp_User_Create @username=N'forbidden',@password_hash=N'x'")
+        finally:
+            c.execute('REVERT')

@@ -1,3 +1,4 @@
+param([ValidateRange(1024,65535)][int]$FrontendPort = 4200)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $python = Join-Path $root '.venv/Scripts/python.exe'
@@ -16,9 +17,9 @@ try {
         try { $health = Invoke-RestMethod "http://127.0.0.1:$port/api/v1/health"; if ($health.status -eq 'ok') { $ready=$true; break } } catch { Start-Sleep -Milliseconds 500 }
     }
     if (!$ready) { throw 'Backend sin respuesta. Revise conexion SQL, permisos y puerto.' }
-    Write-Host "API: http://127.0.0.1:$port/docs | Interfaz: http://localhost:4200 | Ctrl+C para detener"
+    Write-Host "API: http://127.0.0.1:$port/docs | Interfaz: http://localhost:$FrontendPort | Ctrl+C para detener"
     Push-Location (Join-Path $root 'frontend')
-    try { & npm.cmd start -- --host localhost } finally { Pop-Location }
+    try { & npm.cmd start -- --host localhost --port $FrontendPort } finally { Pop-Location }
 } finally {
     if ($backend -and !$backend.HasExited) { & taskkill.exe /PID $backend.Id /T /F | Out-Null }
 }
