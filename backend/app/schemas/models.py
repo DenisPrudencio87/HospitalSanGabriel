@@ -2,7 +2,6 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
-from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
 
