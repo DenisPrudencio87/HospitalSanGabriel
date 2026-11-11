@@ -1,0 +1,31 @@
+# JavaScript / Angular
+node_modules/
+dist/
+.angular/
+coverage/
+playwright-report/
+test-results/
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+# Private configuration
+.env
+.env.*
+!.env.example
+*.log
+*.bak
+*.mdf
+*.ldf
+*.key
+*.pem
+# Editors / OS
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+tmp/
