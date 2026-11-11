@@ -1,0 +1,618 @@
+@if (!api.token()) {
+  <main class="login-page">
+    <section class="login-intro">
+      <div class="brand-mark">✚</div>
+      <span class="eyebrow">HOSPITAL SAN GABRIEL</span>
+      <h1>Un inventario confiable.<br />Una mejor atención.</h1>
+      <p>Productos, lotes y movimientos en un solo lugar.</p>
+      <div class="intro-note">Sistema de gestión de inventario hospitalario</div>
+    </section>
+    <section class="login-card">
+      <span class="eyebrow">ACCESO AL SISTEMA</span>
+      <h2>Bienvenido</h2>
+      <p>Ingresa con tu cuenta de operador.</p>
+      @if (error()) {
+        <div class="notice error" role="alert">{{ error() }}</div>
+      }
+      <form (submit)="login($event)" novalidate>
+        <label
+          >Usuario<input autocomplete="username" [formField]="loginForm.username" /><app-errors
+            [field]="loginForm.username" /></label
+        ><label
+          >Contraseña<input
+            type="password"
+            autocomplete="current-password"
+            [formField]="loginForm.password" /><app-errors [field]="loginForm.password" /></label
+        ><button class="primary wide" [disabled]="busy()">
+          {{ busy() ? 'Conectando…' : 'Iniciar sesión →' }}
+        </button>
+      </form>
+      <small>Solicita tu cuenta al responsable del sistema.</small>
+    </section>
+  </main>
+} @else {
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <b class="brand-mark small">✚</b>
+        <div>San Gabriel<small>INVENTARIO HOSPITALARIO</small></div>
+      </div>
+      <div class="nav-caption">ESPACIO DE TRABAJO</div>
+      <nav aria-label="Principal">
+        @for (item of nav; track item.id) {
+          <button
+            [attr.aria-label]="item.label"
+            [class.selected]="section() === item.id"
+            (click)="go(item.id)"
+            [disabled]="busy()"
+          >
+            <span>{{ item.icon }}</span
+            >{{ item.label }}
+          </button>
+        }
+      </nav>
+      <div class="sidebar-foot">SQL Server · Inventario por lotes<br />Hospital San Gabriel</div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <span>Gestión de inventario / {{ title() }}</span>
+        <div>
+          <b>{{ api.username() }}</b
+          ><button class="ghost" (click)="logout()">Salir</button>
+        </div>
+      </header>
+      <main class="content">
+        <div class="page-heading">
+          <div>
+            <span class="eyebrow">HOSPITAL SAN GABRIEL</span>
+            <h1>{{ title() }}</h1>
+            <p>Control y trazabilidad para cada producto.</p>
+          </div>
+          <button class="secondary" (click)="refresh()" [disabled]="busy()">↻ Actualizar</button>
+        </div>
+        @if (busy()) {
+          <div class="loading" role="status">Procesando solicitud…</div>
+        }
+        @if (error()) {
+          <div class="notice error" role="alert">{{ error() }}</div>
+        }
+        @if (success()) {
+          <div class="notice success" role="status">{{ success() }}</div>
+        }
+        @if (section() === 'dashboard') {
+          @if (dashboard(); as d) {
+            <section class="metrics" aria-label="Indicadores">
+              <article>
+                <span>Productos activos</span><strong>{{ d.summary.active_products }}</strong
+                ><small>Catálogo habilitado</small>
+              </article>
+              <article class="amber">
+                <span>Stock bajo</span><strong>{{ d.summary.low_stock_products }}</strong
+                ><small>Disponible ≤ mínimo</small>
+              </article>
+              <article>
+                <span>Próximos a vencer</span><strong>{{ d.summary.expiring_products }}</strong
+                ><small>Ventana configurada en backend</small>
+              </article>
+              <article class="red">
+                <span>Con lotes vencidos</span><strong>{{ d.summary.expired_products }}</strong
+                ><small>Bloqueados para uso</small>
+              </article>
+              <article class="value">
+                <span>Valor referencial físico</span
+                ><strong>{{ d.summary.inventory_value | currency: 'PEN' : 'S/ ' }}</strong
+                ><small>Incluye existencias vencidas</small>
+              </article>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <h2>Reposición prioritaria</h2>
+                <span class="badge">Stock disponible</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Físico</th>
+                      <th>Disponible</th>
+                      <th>Vencido</th>
+                      <th>Mínimo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (p of d.low_stock; track p.id) {
+                      <tr>
+                        <td>
+                          <b>{{ p.name }}</b
+                          ><small>{{ p.code }}</small>
+                        </td>
+                        <td>{{ p.stock }}</td>
+                        <td>
+                          <span class="badge warning">{{ p.available_stock }}</span>
+                        </td>
+                        <td>{{ p.expired_stock }}</td>
+                        <td>{{ p.min_stock }}</td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="5" class="empty">No hay productos con stock bajo.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            <section class="panel">
+              <h2>Control de vencimientos</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Próximo vencimiento</th>
+                      <th>Unidades próximas</th>
+                      <th>Unidades vencidas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (p of d.expiry; track p.id) {
+                      <tr>
+                        <td>{{ p.name }}</td>
+                        <td>
+                          {{ p.next_expiry ? (p.next_expiry | date: 'dd/MM/yyyy' : 'UTC') : '—' }}
+                        </td>
+                        <td>{{ p.expiring_stock }}</td>
+                        <td>{{ p.expired_stock }}</td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="4" class="empty">Sin alertas de vencimiento.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            <section class="panel">
+              <h2>Actividad del periodo</h2>
+              <form class="filters" (submit)="filterDashboard($event)">
+                <label>Desde<input type="date" [formField]="dateForm.date_from" /></label
+                ><label>Hasta<input type="date" [formField]="dateForm.date_to" /></label
+                ><button class="secondary" [disabled]="busy()">Consultar</button>
+              </form>
+              <div class="two-columns">
+                <div>
+                  <h3>Movimientos por fecha</h3>
+                  @for (m of d.movements; track $index) {
+                    <div class="stat-row">
+                      <span
+                        >{{ m.movement_date | date: 'dd/MM/yyyy' : 'UTC' }} ·
+                        {{ m.kind === 'ENTRY' ? 'Entradas' : 'Salidas' }}</span
+                      ><b>{{ m.quantity }} uds.</b>
+                    </div>
+                  } @empty {
+                    <p>Sin movimientos en el periodo.</p>
+                  }
+                </div>
+                <div>
+                  <h3>Productos con mayores salidas</h3>
+                  @for (p of d.top_exits; track p.id) {
+                    <div class="stat-row">
+                      <span>{{ p.name }}</span
+                      ><b>{{ p.quantity }} uds.</b>
+                    </div>
+                  } @empty {
+                    <p>Sin salidas en el periodo.</p>
+                  }
+                </div>
+              </div>
+            </section>
+          }
+        }
+        @if (section() === 'products') {
+          <section class="panel">
+            <h2>{{ editing() ? 'Editar producto' : 'Registrar producto' }}</h2>
+            <form (submit)="saveProduct($event)" class="form-grid" novalidate>
+              <label
+                >Código único<input [formField]="productForm.code" /><app-errors
+                  [field]="productForm.code" /></label
+              ><label
+                >Nombre<input [formField]="productForm.name" /><app-errors
+                  [field]="productForm.name" /></label
+              ><label
+                >Categoría<select [formField]="productForm.category_id">
+                  <option value="">Seleccionar</option>
+                  @for (c of categories(); track c.id) {
+                    <option [value]="c.id">{{ c.name }}</option>
+                  }</select
+                ><app-errors [field]="productForm.category_id" /></label
+              ><label
+                >Unidad<select [formField]="productForm.unit_id">
+                  <option value="">Seleccionar</option>
+                  @for (c of units(); track c.id) {
+                    <option [value]="c.id">{{ c.name }}</option>
+                  }</select
+                ><app-errors [field]="productForm.unit_id" /></label
+              ><label
+                >Precio unitario (S/)<input
+                  type="number"
+                  step="0.01"
+                  [formField]="productForm.price" /><app-errors
+                  [field]="productForm.price" /></label
+              ><label
+                >Stock mínimo<input
+                  type="number"
+                  step="1"
+                  [formField]="productForm.min_stock" /><app-errors
+                  [field]="productForm.min_stock" /></label
+              ><label class="span-2"
+                >Descripción<textarea [formField]="productForm.description"></textarea
+                ><app-errors [field]="productForm.description" /></label
+              ><label class="checkbox"
+                ><input type="checkbox" [formField]="productForm.tracks_expiry" />Controlar
+                vencimiento por lote</label
+              >
+              <div class="form-actions">
+                <button class="primary" [disabled]="busy()">Guardar producto</button>
+                @if (editing()) {
+                  <button type="button" class="secondary" (click)="cancelEdit()">
+                    Cancelar edición
+                  </button>
+                }
+              </div>
+            </form>
+          </section>
+          <section class="panel">
+            <h2>Catálogo de productos</h2>
+            <form class="filters" (submit)="searchProducts($event)">
+              <label
+                >Buscar<input
+                  placeholder="Código o nombre"
+                  [formField]="filterForm.search" /></label
+              ><label
+                >Categoría<select [formField]="filterForm.category_id">
+                  <option value="">Todas</option>
+                  @for (c of categories(); track c.id) {
+                    <option [value]="c.id">{{ c.name }}</option>
+                  }
+                </select></label
+              ><label
+                >Estado<select [formField]="filterForm.active">
+                  <option value="true">Activos</option>
+                  <option value="false">Inactivos</option>
+                  <option value="">Todos</option>
+                </select></label
+              ><button class="secondary" [disabled]="busy()">Buscar</button>
+            </form>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Categoría / unidad</th>
+                    <th>Precio</th>
+                    <th>Físico</th>
+                    <th>Disponible</th>
+                    <th>Vencido</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of products(); track p.id) {
+                    <tr>
+                      <td>
+                        <b>{{ p.name }}</b
+                        ><small>{{ p.code }}</small
+                        ><small>{{ p.description }}</small>
+                      </td>
+                      <td>
+                        {{ p.category_name }}<small>{{ p.unit_name }}</small>
+                      </td>
+                      <td>{{ p.price | currency: 'PEN' : 'S/ ' }}</td>
+                      <td>{{ p.stock }}</td>
+                      <td>
+                        <span class="badge" [class.warning]="p.available_stock <= p.min_stock">{{
+                          p.available_stock
+                        }}</span>
+                      </td>
+                      <td>{{ p.expired_stock }}</td>
+                      <td>{{ p.active ? 'Activo' : 'Inactivo' }}</td>
+                      <td class="actions">
+                        <button (click)="edit(p)" [disabled]="busy()">Editar</button
+                        ><button (click)="showLots(p)" [disabled]="busy()">Lotes</button>
+                        @if (p.active) {
+                          <button (click)="deactivate(p)" [disabled]="busy()">Desactivar</button>
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" class="empty">No se encontraron productos.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span>{{ totalProducts() }} resultados · página {{ productPage() }}</span
+              ><button (click)="pageProducts(-1)" [disabled]="busy() || productPage() === 1">
+                Anterior</button
+              ><button
+                (click)="pageProducts(1)"
+                [disabled]="busy() || productPage() * pageSize >= totalProducts()"
+              >
+                Siguiente
+              </button>
+            </div>
+          </section>
+          @if (lotTitle()) {
+            <section class="panel">
+              <div class="panel-head">
+                <h2>Lotes · {{ lotTitle() }}</h2>
+                <button (click)="lotTitle.set('')">Cerrar</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Lote</th>
+                      <th>Vencimiento</th>
+                      <th>Stock</th>
+                      <th>Condición</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (l of selectedLots(); track l.id) {
+                      <tr>
+                        <td>{{ l.code }}</td>
+                        <td>
+                          {{
+                            l.expiry ? (l.expiry | date: 'dd/MM/yyyy' : 'UTC') : 'Sin vencimiento'
+                          }}
+                        </td>
+                        <td>{{ l.stock }}</td>
+                        <td>{{ l.expired ? 'Vencido · bloqueado' : 'Vigente' }}</td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="4">Sin lotes registrados.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          }
+        }
+        @if (section() === 'categories') {
+          <div class="two-columns">
+            <section class="panel">
+              <h2>Nueva categoría</h2>
+              <form (submit)="saveCategory($event)" novalidate>
+                <label
+                  >Nombre<input [formField]="categoryForm.name" /><app-errors
+                    [field]="categoryForm.name" /></label
+                ><label
+                  >Descripción<textarea [formField]="categoryForm.description"></textarea
+                  ><app-errors [field]="categoryForm.description" /></label
+                ><button class="primary" [disabled]="busy()">Registrar categoría</button>
+              </form>
+            </section>
+            <section class="panel">
+              <h2>Categorías disponibles</h2>
+              @for (c of categories(); track c.id) {
+                <div class="catalog-row">
+                  <b>{{ c.name }}</b>
+                  <p>{{ c.description }}</p>
+                </div>
+              } @empty {
+                <p>No hay categorías.</p>
+              }
+            </section>
+          </div>
+        }
+        @if (section() === 'entries' || section() === 'exits') {
+          <div class="two-columns">
+            <section class="panel">
+              <h2>{{ section() === 'entries' ? 'Nueva entrada' : 'Nueva salida hospitalaria' }}</h2>
+              <form (submit)="saveMovement($event)" novalidate>
+                <label
+                  >Producto<select [formField]="movementForm.product_id">
+                    <option value="">Seleccionar producto activo</option>
+                    @for (p of choices(); track p.id) {
+                      <option [value]="p.id">{{ p.code }} · {{ p.name }}</option>
+                    }</select
+                  ><app-errors [field]="movementForm.product_id"
+                /></label>
+                <div class="form-grid">
+                  <label
+                    >Cantidad<input
+                      type="number"
+                      step="1"
+                      [formField]="movementForm.quantity" /><app-errors
+                      [field]="movementForm.quantity" /></label
+                  ><label
+                    >Fecha<input
+                      type="date"
+                      [max]="today"
+                      [formField]="movementForm.movement_date" /><app-errors
+                      [field]="movementForm.movement_date"
+                  /></label>
+                </div>
+                @if (section() === 'entries') {
+                  <label
+                    >Tipo de ingreso<select [formField]="movementForm.entry_reason_id">
+                      <option value="">Seleccionar</option>
+                      @for (r of reasons(); track r.id) {
+                        <option [value]="r.id">{{ r.name }}</option>
+                      }</select
+                    ><app-errors [field]="movementForm.entry_reason_id"
+                  /></label>
+                  <div class="form-grid">
+                    <label
+                      >Número de lote<input [formField]="movementForm.lot_code" /><app-errors
+                        [field]="movementForm.lot_code" /></label
+                    ><label
+                      >Vencimiento<input type="date" [formField]="movementForm.expiry" /><app-errors
+                        [field]="movementForm.expiry"
+                    /></label>
+                  </div>
+                  @if (movementModel().expiry && movementModel().expiry < today) {
+                    <div class="notice warning">
+                      Lote vencido: se registrará como existencia bloqueada para uso hospitalario.
+                    </div>
+                  }
+                } @else {
+                  <label
+                    >Área hospitalaria de destino<select [formField]="movementForm.area_id">
+                      <option value="">Seleccionar</option>
+                      @for (a of areas(); track a.id) {
+                        <option [value]="a.id">{{ a.name }}</option>
+                      }</select
+                    ><app-errors [field]="movementForm.area_id"
+                  /></label>
+                  <div class="notice info">
+                    FEFO: primero salen los lotes vigentes que vencen antes. El servidor vuelve a
+                    validar el stock al registrar.
+                  </div>
+                }
+                <label
+                  >Motivo / observación<textarea [formField]="movementForm.reason"></textarea
+                  ><app-errors [field]="movementForm.reason" /></label
+                ><button class="primary" [disabled]="busy()">
+                  {{ section() === 'entries' ? 'Registrar entrada' : 'Registrar salida' }}
+                </button>
+              </form>
+            </section>
+            <section class="panel guidance">
+              <span class="eyebrow">CONTROL DE EXISTENCIAS</span>
+              <h2>Stock con trazabilidad</h2>
+              @if (selectedProduct(); as p) {
+                <h3>{{ p.name }}</h3>
+                <div class="stock-box">
+                  <div>
+                    <small>Físico</small><b>{{ p.stock }}</b>
+                  </div>
+                  <div>
+                    <small>Disponible</small><b>{{ p.available_stock }}</b>
+                  </div>
+                  <div>
+                    <small>Vencido</small><b>{{ p.expired_stock }}</b>
+                  </div>
+                </div>
+                <p>Mínimo: {{ p.min_stock }} · Unidad: {{ p.unit_name }}</p>
+                @if (p.next_expiry) {
+                  <p>Próximo vencimiento: {{ p.next_expiry | date: 'dd/MM/yyyy' : 'UTC' }}</p>
+                }
+              }
+              <p>
+                Cada operación actualiza producto, lotes e historial en una sola transacción SQL
+                Server.
+              </p>
+              <p>
+                Cantidades enteras positivas. Los lotes vencidos no están disponibles para uso
+                hospitalario.
+              </p>
+            </section>
+          </div>
+        }
+        @if (section() === 'history') {
+          <section class="panel">
+            <h2>Historial de movimientos</h2>
+            <form class="filters" (submit)="filterHistory($event)">
+              <label
+                >Producto<select [formField]="historyForm.product_id">
+                  <option value="">Todos</option>
+                  @for (p of historyChoices(); track p.id) {
+                    <option [value]="p.id">{{ p.code }} · {{ p.name }}</option>
+                  }
+                </select></label
+              ><label
+                >Tipo<select [formField]="historyForm.kind">
+                  <option value="">Todos</option>
+                  <option value="ENTRY">Entrada</option>
+                  <option value="EXIT">Salida</option>
+                </select></label
+              ><label
+                >Área<select [formField]="historyForm.area_id">
+                  <option value="">Todas</option>
+                  @for (a of areas(); track a.id) {
+                    <option [value]="a.id">{{ a.name }}</option>
+                  }
+                </select></label
+              ><label>Desde<input type="date" [formField]="historyForm.date_from" /></label
+              ><label>Hasta<input type="date" [formField]="historyForm.date_to" /></label
+              ><button class="secondary" [disabled]="busy()">Filtrar</button>
+            </form>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha / #</th>
+                    <th>Producto</th>
+                    <th>Movimiento</th>
+                    <th>Cantidad</th>
+                    <th>Anterior · posterior</th>
+                    <th>Destino / motivo</th>
+                    <th>Lotes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of movements(); track m.id) {
+                    <tr>
+                      <td>
+                        {{ m.movement_date | date: 'dd/MM/yyyy' : 'UTC'
+                        }}<small>#{{ m.id }} · {{ m.username }}</small>
+                      </td>
+                      <td>
+                        {{ m.product_name }}<small>{{ m.product_code }}</small>
+                      </td>
+                      <td>
+                        <span class="badge" [class.warning]="m.kind === 'EXIT'">{{
+                          m.kind === 'ENTRY' ? 'Entrada' : 'Salida'
+                        }}</span>
+                      </td>
+                      <td>{{ m.quantity }}</td>
+                      <td>{{ m.stock_before }} → {{ m.stock_after }}</td>
+                      <td>
+                        {{ m.area_name || 'Ingreso' }}<small>{{ m.reason }}</small>
+                      </td>
+                      <td>
+                        @for (l of m.lots; track $index) {
+                          <small
+                            ><b>{{ l.lot_code }}</b> · {{ l.quantity }} uds. ·
+                            {{
+                              l.expiry ? (l.expiry | date: 'dd/MM/yyyy' : 'UTC') : 'Sin vencimiento'
+                            }}</small
+                          >
+                        }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="empty">No hay movimientos para estos filtros.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span>{{ totalMovements() }} resultados · página {{ historyPage() }}</span
+              ><button (click)="pageHistory(-1)" [disabled]="busy() || historyPage() === 1">
+                Anterior</button
+              ><button
+                (click)="pageHistory(1)"
+                [disabled]="busy() || historyPage() * pageSize >= totalMovements()"
+              >
+                Siguiente
+              </button>
+            </div>
+          </section>
+        }
+        <footer>Hospital San Gabriel · Gestión de inventario · Universidad Continental</footer>
+      </main>
+    </div>
+  </div>
+}

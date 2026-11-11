@@ -1,5 +1,6 @@
 """Local provisioning only. Runtime repositories never execute direct table SQL."""
 import argparse
+import os
 from contextlib import closing
 from getpass import getpass
 from pathlib import Path
@@ -38,6 +39,21 @@ def configure():
 def setup(args):
     started = time.perf_counter()
     configure()
+    overrides = {'SQL_SERVER': args.server, 'SQL_DATABASE': args.database}
+    if any(overrides.values()):
+        path = ROOT / '.env'
+        content = path.read_text(encoding='utf-8')
+        for key, value in overrides.items():
+            if value is not None:
+                if '\n' in value or '\r' in value:
+                    raise ValueError('Configuracion invalida')
+                if re.search(r'^' + key + '=', content, flags=re.M):
+                    content = re.sub(r'^' + key + '=.*$', lambda m: key + '=' + value, content, flags=re.M)
+                else:
+                    content += '\n' + key + '=' + value + '\n'
+                os.environ[key] = value
+        path.write_text(content, encoding='utf-8')
+        get_settings.cache_clear()
     s = get_settings()
     if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,99}', s.sql_database):
         raise ValueError('Nombre de base: letras, numeros y guion bajo; comenzar por letra')
@@ -89,6 +105,8 @@ def check():
     import pyodbc
     print('Python:', sys.version.split()[0])
     print('ODBC:', ', '.join(pyodbc.drivers()))
+    if get_settings().sql_driver not in pyodbc.drivers():
+        raise ValueError('Falta el controlador configurado: ' + get_settings().sql_driver)
     with closing(connect('master')) as c:
         row = c.execute("SELECT SERVERPROPERTY('ProductVersion'), SERVERPROPERTY('Edition'), HAS_PERMS_BY_NAME(NULL,NULL,'CREATE ANY DATABASE')").fetchone()
         print('SQL version / edicion / puede crear base:', *row)
@@ -100,6 +118,8 @@ sub = parser.add_subparsers(dest='command', required=True)
 sp = sub.add_parser('setup')
 sp.add_argument('--demo', action='store_true')
 sp.add_argument('--existing-empty', action='store_true')
+sp.add_argument('--server')
+sp.add_argument('--database')
 up = sub.add_parser('create-user')
 up.add_argument('--username')
 sub.add_parser('check')

@@ -3,7 +3,8 @@ $root = Split-Path $PSScriptRoot -Parent
 $python = Join-Path $root '.venv/Scripts/python.exe'
 if (!(Test-Path $python) -or !(Test-Path (Join-Path $root 'frontend/node_modules'))) { throw 'Faltan dependencias; consulte README.md' }
 if (!(Test-Path (Join-Path $root '.env'))) { throw 'Falta .env; ejecute setup-db.ps1 o configure .env.example' }
-$port = & $python -c "import sys; sys.path.insert(0,r'$root/backend'); from app.core.config import get_settings; print(get_settings().api_port)"
+Push-Location (Join-Path $root 'backend')
+try { $port = & $python -c "from app.core.config import get_settings; print(get_settings().api_port)" } finally { Pop-Location }
 if ($LASTEXITCODE -ne 0) { throw 'No se pudo leer configuracion' }
 $env:API_PORT = "$port"
 $backend = $null
@@ -19,5 +20,5 @@ try {
     Push-Location (Join-Path $root 'frontend')
     try { & npm.cmd start -- --host localhost } finally { Pop-Location }
 } finally {
-    if ($backend -and !$backend.HasExited) { Stop-Process -Id $backend.Id }
+    if ($backend -and !$backend.HasExited) { & taskkill.exe /PID $backend.Id /T /F | Out-Null }
 }
