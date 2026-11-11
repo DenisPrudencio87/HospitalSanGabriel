@@ -177,8 +177,16 @@
             <section class="panel">
               <h2>Actividad del periodo</h2>
               <form class="filters" (submit)="filterDashboard($event)">
-                <label>Desde<input type="date" [formField]="dateForm.date_from" /></label
-                ><label>Hasta<input type="date" [formField]="dateForm.date_to" /></label
+                <label
+                  >Desde<input
+                    type="date"
+                    [formField]="dateForm.date_from"
+                    (input)="setFilter('dashboard', 'date_from', $event)" /></label
+                ><label
+                  >Hasta<input
+                    type="date"
+                    [formField]="dateForm.date_to"
+                    (input)="setFilter('dashboard', 'date_to', $event)" /></label
                 ><button class="secondary" [disabled]="busy()">Consultar</button>
               </form>
               <div class="two-columns">
@@ -269,16 +277,23 @@
               <label
                 >Buscar<input
                   placeholder="Código o nombre"
-                  [formField]="filterForm.search" /></label
+                  [formField]="filterForm.search"
+                  (input)="setFilter('products', 'search', $event)" /></label
               ><label
-                >Categoría<select [formField]="filterForm.category_id">
+                >Categoría<select
+                  [formField]="filterForm.category_id"
+                  (change)="setFilter('products', 'category_id', $event)"
+                >
                   <option value="">Todas</option>
                   @for (c of categories(); track c.id) {
                     <option [value]="c.id">{{ c.name }}</option>
                   }
                 </select></label
               ><label
-                >Estado<select [formField]="filterForm.active">
+                >Estado<select
+                  [formField]="filterForm.active"
+                  (change)="setFilter('products', 'active', $event)"
+                >
                   <option value="true">Activos</option>
                   <option value="false">Inactivos</option>
                   <option value="">Todos</option>
@@ -523,27 +538,44 @@
             <h2>Historial de movimientos</h2>
             <form class="filters" (submit)="filterHistory($event)">
               <label
-                >Producto<select [formField]="historyForm.product_id">
+                >Producto<select
+                  [formField]="historyForm.product_id"
+                  (change)="setFilter('history', 'product_id', $event)"
+                >
                   <option value="">Todos</option>
                   @for (p of historyChoices(); track p.id) {
                     <option [value]="p.id">{{ p.code }} · {{ p.name }}</option>
                   }
                 </select></label
               ><label
-                >Tipo<select [formField]="historyForm.kind">
+                >Tipo<select
+                  [formField]="historyForm.kind"
+                  (change)="setFilter('history', 'kind', $event)"
+                >
                   <option value="">Todos</option>
                   <option value="ENTRY">Entrada</option>
                   <option value="EXIT">Salida</option>
                 </select></label
               ><label
-                >Área<select [formField]="historyForm.area_id">
+                >Área<select
+                  [formField]="historyForm.area_id"
+                  (change)="setFilter('history', 'area_id', $event)"
+                >
                   <option value="">Todas</option>
                   @for (a of areas(); track a.id) {
                     <option [value]="a.id">{{ a.name }}</option>
                   }
                 </select></label
-              ><label>Desde<input type="date" [formField]="historyForm.date_from" /></label
-              ><label>Hasta<input type="date" [formField]="historyForm.date_to" /></label
+              ><label
+                >Desde<input
+                  type="date"
+                  [formField]="historyForm.date_from"
+                  (input)="setFilter('history', 'date_from', $event)" /></label
+              ><label
+                >Hasta<input
+                  type="date"
+                  [formField]="historyForm.date_to"
+                  (input)="setFilter('history', 'date_to', $event)" /></label
               ><button class="secondary" [disabled]="busy()">Filtrar</button>
             </form>
             <div class="table-wrap">
